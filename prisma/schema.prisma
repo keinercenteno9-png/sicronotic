@@ -1,0 +1,130 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  // La URL se toma de las variables de entorno o prisma.config.ts
+}
+
+// 👈 NUEVO MODELO: Roles de usuario
+model Rol {
+  id         Int       @id @default(autoincrement())
+  rol        String    @unique
+  descripcion String?
+  usuarios   Usuario[]
+  
+  @@index([rol])
+}
+
+// 👈 NUEVO MODELO: Usuarios del sistema
+model Usuario {
+  id         Int       @id @default(autoincrement())
+  email      String    @unique
+  password   String
+  nombres    String
+  apellidos  String
+  cedula     String    @unique
+  rolId      Int
+  rol        Rol       @relation(fields: [rolId], references: [id])
+  activo     Boolean   @default(true)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  
+  // Relaciones opcionales con tus modelos existentes
+  eventosInvitados   EventoInvitado[]  // Array, no es opcional (puede estar vacío)
+  noticiasCreadas    Noticia[]         // Array, no es opcional (puede estar vacío)
+  
+  @@index([email])
+  @@index([cedula])
+}
+
+// Tus modelos existentes...
+model Evento {
+  id           String   @id @default(cuid())
+  titulo       String
+  fecha        DateTime
+  horaInicio   String
+  horaFin      String
+  ubicacion    String?
+  descripcion  String?
+  notificar    Boolean  @default(false)
+  color        String   @default("#FFFFFF")
+  textColor    String   @default("#000000")
+  bold         Boolean  @default(false)
+  italic       Boolean  @default(false)
+  underline    Boolean  @default(false)
+  textAlign    String   @default("left")
+  icono        String?
+  
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  invitados    EventoInvitado[]
+  
+  @@index([fecha])
+}
+
+model EventoInvitado {
+  id         String   @id @default(cuid())
+  eventoId   String
+  nombre     String
+  email      String?
+  confirmado Boolean  @default(false)
+  
+  evento     Evento   @relation(fields: [eventoId], references: [id], onDelete: Cascade)
+  
+  // 👈 RELACIÓN con usuario
+  usuarioId  Int?
+  usuario    Usuario? @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
+  
+  @@unique([eventoId, nombre])
+  @@index([eventoId])
+  @@index([usuarioId])
+}
+
+model Noticia {
+  id          String   @id @default(cuid())
+  titulo      String
+  resumen     String
+  contenido   String
+  categoria   String
+  autor       String
+  destacada   Boolean  @default(false)
+  colorTexto  String   @default("#000000")
+  vistas      Int      @default(0)
+  fecha       DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  fotos       NoticiaFoto[]
+  
+  // 👈 RELACIÓN con usuario creador
+  usuarioId   Int?
+  usuario     Usuario? @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
+  
+  @@index([categoria])
+  @@index([destacada])
+  @@index([fecha(sort: Desc)])
+  @@index([usuarioId])
+}
+
+model NoticiaFoto {
+  id        String   @id @default(cuid())
+  url       String
+  nombre    String
+  noticiaId String
+  noticia   Noticia  @relation(fields: [noticiaId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  
+  @@index([noticiaId])
+}
+
+model Configuracion {
+  clave       String   @id
+  valor       String
+  descripcion String?
+  updatedAt   DateTime @updatedAt
+}
