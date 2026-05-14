@@ -1,11 +1,20 @@
 // src/app/api/fotos/route.ts
 import { NextRequest, NextResponse } from 'next/server'
-import { writeFile, mkdir, unlink } from 'fs/promises'
-import { join } from 'path'
-import { existsSync } from 'fs'
-import { prisma } from '@/lib/prisma'  // ✅ IMPORTAR LA INSTANCIA EXISTENTE
+import { prisma } from '@/lib/prisma'
+import { uploadImageToR2, deleteImageFromR2 } from '@/lib/r2'
 
-// ❌ ELIMINA ESTA LÍNEA: const prisma = new PrismaClient();
+const validTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif', 'image/webp']
+const maxSize = 5 * 1024 * 1024
+
+const getR2KeyFromUrl = (url: string) => {
+  if (url.startsWith('/uploads/noticias/')) {
+    return `noticias/${url.replace('/uploads/noticias/', '')}`
+  }
+  if (url.startsWith('noticias/')) {
+    return url
+  }
+  throw new Error('URL de foto no válida para R2: ' + url)
+}
 
 // POST - Subir foto
 export async function POST(req: NextRequest) {
@@ -31,7 +40,6 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const validTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif', 'image/webp']
     if (!validTypes.includes(file.type)) {
       return NextResponse.json(
         { success: false, error: 'Formato no válido. Use JPG, PNG, GIF o WEBP' },
@@ -39,62 +47,45 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    if (file.size > 5 * 1024 * 1024) {
+    if (file.size > maxSize) {
       return NextResponse.json(
         { success: false, error: 'La imagen no debe superar los 5MB' },
         { status: 400 }
       )
     }
 
-    // Verificar que la noticia existe
     const noticia = await prisma.noticia.findUnique({
-      where: { id: noticiaId }
+      where: { id: noticiaId },
     })
 
     if (!noticia) {
-      console.log('❌ Noticia no encontrada:', noticiaId)
       return NextResponse.json(
         { success: false, error: 'Noticia no encontrada' },
         { status: 404 }
       )
     }
 
-    // Crear directorio
-    const uploadsDir = join(process.cwd(), 'public/uploads/noticias')
-    if (!existsSync(uploadsDir)) {
-      console.log('📁 Creando directorio:', uploadsDir)
-      await mkdir(uploadsDir, { recursive: true })
-    }
-
-    // Generar nombre único
     const timestamp = Date.now()
     const randomString = Math.random().toString(36).substring(7)
-    const extension = file.name.split('.').pop()
+    const extension = file.name.split('.').pop() ?? 'jpg'
     const fileName = `noticia_${noticiaId}_${timestamp}_${randomString}.${extension}`
-    const filePath = join(uploadsDir, fileName)
+    const fileUrl = `/uploads/noticias/${fileName}`
 
-    console.log('📁 Guardando archivo:', filePath)
-
-    const bytes = await file.arrayBuffer()
-    const buffer = Buffer.from(bytes)
-    await writeFile(filePath, buffer)
-
-    console.log('✅ Archivo guardado correctamente')
+    const buffer = Buffer.from(await file.arrayBuffer())
+    await uploadImageToR2(fileName, buffer, file.type)
 
     const foto = await prisma.noticiaFoto.create({
       data: {
-        url: `/uploads/noticias/${fileName}`,
-        nombre: nombre,
-        noticiaId: noticiaId
-      }
+        url: fileUrl,
+        nombre,
+        noticiaId,
+      },
     })
-
-    console.log('✅ Foto guardada en BD:', foto.id)
 
     return NextResponse.json({
       success: true,
       data: foto,
-      message: 'Foto subida exitosamente'
+      message: 'Foto subida exitosamente',
     })
 
   } catch (error) {
@@ -171,15 +162,14 @@ export async function DELETE(req: NextRequest) {
     }
 
     try {
-      const filePath = join(process.cwd(), 'public', foto.url)
-      await unlink(filePath)
-      console.log(`✅ Eliminado archivo: ${filePath}`)
+      const r2Key = getR2KeyFromUrl(foto.url)
+      await deleteImageFromR2(r2Key)
     } catch (error) {
-      console.error(`Error eliminando archivo:`, error)
+      console.error('❌ Error eliminando imagen en R2:', error)
     }
 
     await prisma.noticiaFoto.delete({
-      where: { id }
+      where: { id },
     })
 
     return NextResponse.json({

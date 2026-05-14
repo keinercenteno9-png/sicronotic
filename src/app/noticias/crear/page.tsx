@@ -376,6 +376,23 @@ export default function CrearNoticiaPage() {
     return isValid
   }
 
+  const parseJsonResponse = async (response: Response) => {
+    const contentType = response.headers.get('content-type') || ''
+    const text = await response.text()
+
+    if (!contentType.includes('application/json')) {
+      console.error('Respuesta no JSON del servidor:', text)
+      throw new Error('El servidor respondió con un error inesperado.')
+    }
+
+    try {
+      return JSON.parse(text)
+    } catch (error) {
+      console.error('Error al parsear JSON:', error, 'texto recibido:', text)
+      throw new Error('No se pudo procesar la respuesta del servidor.')
+    }
+  }
+
   const handleSubmit = async () => {
     console.log('=== handleSubmit INICIADO ===')
     console.log('Estado actual:')
@@ -418,11 +435,11 @@ export default function CrearNoticiaPage() {
         })
       })
 
-      const noticiaResult = await noticiaResponse.json()
+      const noticiaResult = await parseJsonResponse(noticiaResponse)
       console.log('Respuesta creación noticia:', noticiaResult)
 
-      if (!noticiaResult.success) {
-        throw new Error(noticiaResult.error || 'Error al crear la noticia')
+      if (!noticiaResponse.ok || !noticiaResult.success) {
+        throw new Error(noticiaResult?.error || 'Error al crear la noticia')
       }
 
       const noticiaId = noticiaResult.data.id
@@ -445,12 +462,16 @@ export default function CrearNoticiaPage() {
         body: formDataImage,
       })
 
-      const imageResult = await imageResponse.json()
+      const imageResult = await parseJsonResponse(imageResponse)
       console.log('Respuesta subida imagen:', imageResult)
+
+      if (!imageResponse.ok || !imageResult.success) {
+        throw new Error(imageResult?.error || 'Error al subir la imagen')
+      }
 
       if (!imageResult.success) {
         console.warn('⚠️ Noticia creada pero error al subir la foto:', imageResult.error)
-        toast.warning('Noticia creada, pero hubo un error al subir la foto')
+        toast.warning(imageResult.error || 'Noticia creada, pero hubo un error al subir la foto')
       } else {
         console.log('✅ Foto subida exitosamente!')
         toast.success('¡Noticia creada con foto exitosamente!')

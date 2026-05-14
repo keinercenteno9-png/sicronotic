@@ -1,8 +1,6 @@
-// src/lib/prisma.ts
 import 'dotenv/config'
 import { PrismaClient } from '@prisma/client'
-import { PrismaPg } from '@prisma/adapter-pg'
-import { Pool } from 'pg'
+import { PrismaNeon } from '@prisma/adapter-neon'
 
 console.log('🔧 Inicializando Prisma Client...')
 
@@ -12,11 +10,7 @@ if (!connectionString) {
   throw new Error('DATABASE_URL no está definida')
 }
 
-const pool = new Pool({
-  connectionString,
-})
-
-const adapter = new PrismaPg(pool)
+const adapter = new PrismaNeon({ connectionString })
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined
@@ -29,14 +23,10 @@ if (process.env.NODE_ENV !== 'production') {
   console.log('✅ Prisma Client inicializado en modo desarrollo')
 }
 
-// Verificar conexión a la base de datos
 prisma.$connect()
   .then(() => {
     console.log('✅ Conexión a PostgreSQL exitosa')
   })
   .catch((error) => {
-    console.error('❌ Error de conexión a PostgreSQL:', error.message)
+    console.error('❌ Error de conexión a PostgreSQL:', error instanceof Error ? error.message : String(error))
   })
-prisma.$connect()
-  .then(() => console.log('✅ Conexión a PostgreSQL exitosa'))
-  .catch((error) => console.error('❌ Error conectando a PostgreSQL:', error))

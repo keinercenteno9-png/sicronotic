@@ -1,0 +1,113 @@
+import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3'
+import { env } from 'process'
+import { mkdir, writeFile, readFile, unlink } from 'fs/promises'
+import { existsSync } from 'fs'
+import { join } from 'path'
+
+const bucket = env.R2_BUCKET_NAME
+const endpoint = env.R2_ENDPOINT
+const accessKeyId = env.R2_ACCESS_KEY_ID
+const secretAccessKey = env.R2_SECRET_ACCESS_KEY
+const region = env.R2_REGION || 'auto'
+
+const r2Enabled = Boolean(bucket && endpoint && accessKeyId && secretAccessKey)
+let client: S3Client | undefined
+
+if (r2Enabled) {
+  client = new S3Client({
+    region,
+    endpoint,
+    credentials: {
+      accessKeyId,
+      secretAccessKey,
+    },
+    forcePathStyle: true,
+  })
+  console.log('☁️ Cloudflare R2 configurado y habilitado')
+} else {
+  console.warn('⚠️ Cloudflare R2 no está configurado. Se usará almacenamiento local en public/uploads/noticias')
+}
+
+const localUploadsDir = join(process.cwd(), 'public/uploads/noticias')
+const buildKey = (filename: string) => `noticias/${filename}`
+const localFilePath = (filename: string) => join(localUploadsDir, filename)
+
+const ensureLocalUploadsDir = async () => {
+  if (!existsSync(localUploadsDir)) {
+    await mkdir(localUploadsDir, { recursive: true })
+  }
+}
+
+const getContentType = (filename: string) => {
+  const ext = filename.split('.').pop()?.toLowerCase()
+  switch (ext) {
+    case 'jpg':
+    case 'jpeg':
+      return 'image/jpeg'
+    case 'png':
+      return 'image/png'
+    case 'gif':
+      return 'image/gif'
+    case 'webp':
+      return 'image/webp'
+    default:
+      return 'application/octet-stream'
+  }
+}
+
+export const uploadImageToR2 = async (
+  filename: string,
+  body: Uint8Array | Buffer,
+  contentType: string
+) => {
+  const key = buildKey(filename)
+
+  if (r2Enabled && client) {
+    await client.send(
+      new PutObjectCommand({
+        Bucket: bucket,
+        Key: key,
+        Body: body,
+        ContentType: contentType,
+      })
+    )
+    return key
+  }
+
+  await ensureLocalUploadsDir()
+  await writeFile(localFilePath(filename), body)
+  return key
+}
+
+export const getImageFromR2 = async (filename: string) => {
+  if (r2Enabled && client) {
+    const key = buildKey(filename)
+    return client.send(
+      new GetObjectCommand({
+        Bucket: bucket,
+        Key: key,
+      })
+    )
+  }
+
+  const Body = await readFile(localFilePath(filename))
+  return {
+    Body,
+    ContentType: getContentType(filename),
+  }
+}
+
+export const deleteImageFromR2 = async (filename: string) => {
+  if (r2Enabled && client) {
+    const key = buildKey(filename)
+    await client.send(
+      new DeleteObjectCommand({
+        Bucket: bucket,
+        Key: key,
+      })
+    )
+    return
+  }
+
+  await unlink(localFilePath(filename)).catch(() => {})
+}
