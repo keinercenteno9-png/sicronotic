@@ -14,15 +14,15 @@ const r2Enabled = Boolean(bucket && endpoint && accessKeyId && secretAccessKey)
 let client: S3Client | undefined
 
 if (r2Enabled) {
+  const credsProvider = async () => ({
+    accessKeyId: accessKeyId!,
+    secretAccessKey: secretAccessKey!,
+  })
+
   client = new S3Client({
     region,
     endpoint: endpoint!,
-    // TypeScript types for credentials here expect non-undefined strings or a provider.
-    // We ensure variables are present because `r2Enabled` is true, and cast to satisfy the SDK types.
-    credentials: {
-      accessKeyId: accessKeyId as string,
-      secretAccessKey: secretAccessKey as string,
-    } as any,
+    credentials: credsProvider,
     forcePathStyle: true,
   })
   console.log('☁️ Cloudflare R2 configurado y habilitado')
