@@ -16,11 +16,13 @@ let client: S3Client | undefined
 if (r2Enabled) {
   client = new S3Client({
     region,
-    endpoint,
+    endpoint: endpoint!,
+    // TypeScript types for credentials here expect non-undefined strings or a provider.
+    // We ensure variables are present because `r2Enabled` is true, and cast to satisfy the SDK types.
     credentials: {
-      accessKeyId,
-      secretAccessKey,
-    },
+      accessKeyId: accessKeyId as string,
+      secretAccessKey: secretAccessKey as string,
+    } as any,
     forcePathStyle: true,
   })
   console.log('☁️ Cloudflare R2 configurado y habilitado')
@@ -31,6 +33,10 @@ if (r2Enabled) {
 const localUploadsDir = join(process.cwd(), 'public/uploads/noticias')
 const buildKey = (filename: string) => `noticias/${filename}`
 const localFilePath = (filename: string) => join(localUploadsDir, filename)
+
+const normalizeKey = (filename: string) => {
+  return filename.startsWith('noticias/') ? filename : buildKey(filename)
+}
 
 const ensureLocalUploadsDir = async () => {
   if (!existsSync(localUploadsDir)) {
@@ -80,8 +86,9 @@ export const uploadImageToR2 = async (
 }
 
 export const getImageFromR2 = async (filename: string) => {
+  const key = normalizeKey(filename)
+
   if (r2Enabled && client) {
-    const key = buildKey(filename)
     return client.send(
       new GetObjectCommand({
         Bucket: bucket,
@@ -90,16 +97,17 @@ export const getImageFromR2 = async (filename: string) => {
     )
   }
 
-  const Body = await readFile(localFilePath(filename))
+  const Body = await readFile(localFilePath(key.replace(/^noticias\//, '')))
   return {
     Body,
-    ContentType: getContentType(filename),
+    ContentType: getContentType(key.replace(/^noticias\//, '')),
   }
 }
 
 export const deleteImageFromR2 = async (filename: string) => {
+  const key = normalizeKey(filename)
+
   if (r2Enabled && client) {
-    const key = buildKey(filename)
     await client.send(
       new DeleteObjectCommand({
         Bucket: bucket,
@@ -109,5 +117,5 @@ export const deleteImageFromR2 = async (filename: string) => {
     return
   }
 
-  await unlink(localFilePath(filename)).catch(() => {})
+  await unlink(localFilePath(key.replace(/^noticias\//, ''))).catch(() => {})
 }

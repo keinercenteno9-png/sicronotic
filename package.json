@@ -13,6 +13,7 @@
     "db:migrate": "prisma migrate dev",
     "db:reset": "prisma migrate reset",
     "create-admin": "tsx src/scripts/create-admin.ts",
+    "clean:old-noticias": "tsx src/scripts/cleanup-old-noticias.ts",
     "postinstall": "prisma generate"
   },
   "dependencies": {
