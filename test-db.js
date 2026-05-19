@@ -1,5 +1,5 @@
 // test-db.js
-const { PrismaClient } = require('@prisma/client')
+const { PrismaClient } = require('@prisma/client') // eslint-disable-line @typescript-eslint/no-require-imports
 
 async function test() {
   console.log('🔍 Probando conexión a PostgreSQL...')

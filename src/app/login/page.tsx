@@ -18,7 +18,7 @@ export default function LoginPage() {
     email: '',
     password: ''
   })
-  const [isMounted, setIsMounted] = useState(false)
+  const [isMounted, setIsMounted] = useState<boolean>(() => typeof window !== 'undefined')
 
   // Redirigir si ya está autenticado
   useEffect(() => {
@@ -28,7 +28,6 @@ export default function LoginPage() {
   }, [status, router])
 
   useEffect(() => {
-    setIsMounted(true)
     const handleMouseMove = (e: MouseEvent): void => {
       setMousePosition({ x: e.clientX, y: e.clientY })
     }

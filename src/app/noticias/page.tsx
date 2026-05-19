@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { motion, AnimatePresence, Variants } from 'framer-motion'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
+import type { Swiper as SwiperType } from 'swiper'
 import { 
   Search, 
   Clock, 
@@ -59,6 +60,12 @@ const categorias = [
   { id: 'convocatoria', nombre: 'Convocatorias', icono: Mail, color: 'purple' }
 ]
 
+type Foto = {
+  id: string
+  url: string
+  nombre: string
+}
+
 type Noticia = {
   id: string
   titulo: string
@@ -71,7 +78,7 @@ type Noticia = {
   destacada?: boolean
   vistas?: number
   colorTexto?: string
-  fotos?: any[]
+  fotos?: Foto[]
 }
 
 // Función para obtener URL de imagen desde el sistema de archivos
@@ -313,7 +320,7 @@ function GaleriaFotosModal({
   open: boolean; 
   onClose: () => void;
 }) {
-  const [fotos, setFotos] = useState<any[]>([])
+  const [fotos, setFotos] = useState<Foto[]>([])
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
@@ -437,7 +444,7 @@ export default function NoticiasPage() {
   const [subirFotoModalOpen, setSubirFotoModalOpen] = useState(false)
   const [galeriaModalOpen, setGaleriaModalOpen] = useState(false)
   const [noticiaParaFotos, setNoticiaParaFotos] = useState<Noticia | null>(null)
-  const swiperRef = useRef<any>(null)
+  const swiperRef = useRef<SwiperType | null>(null)
 
   // Cargar noticias desde la API
   const cargarNoticias = async (showRefresh = false) => {
@@ -495,17 +502,23 @@ export default function NoticiasPage() {
 
   // Cargar noticias al inicio y cuando cambian filtros
   useEffect(() => {
-    cargarNoticias()
+    const timeout = window.setTimeout(() => {
+      cargarNoticias()
+    }, 0)
+    return () => window.clearTimeout(timeout)
   }, [categoriaSeleccionada, busqueda])
 
   // Verificar si hay nueva noticia creada
   useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search)
-    if (urlParams.get('creada') === 'true') {
-      toast.success('¡Noticia creada exitosamente!')
-      cargarNoticias()
-      router.replace('/noticias')
-    }
+    const timeout = window.setTimeout(() => {
+      const urlParams = new URLSearchParams(window.location.search)
+      if (urlParams.get('creada') === 'true') {
+        toast.success('¡Noticia creada exitosamente!')
+        cargarNoticias()
+        router.replace('/noticias')
+      }
+    }, 0)
+    return () => window.clearTimeout(timeout)
   }, [router])
 
   // Abrir diálogo de confirmación para eliminar
@@ -1331,7 +1344,7 @@ export default function NoticiasPage() {
                   </div>
                   
                   <div className="bg-green-500/10 border-l-4 border-green-500 p-5 mb-8 rounded-r-xl">
-                    <p className="italic text-gray-300">"{noticiaSeleccionada.resumen}"</p>
+                    <p className="italic text-gray-300">&quot;{noticiaSeleccionada.resumen}&quot;</p>
                   </div>
                   
                   <div className="prose prose-invert prose-green max-w-none">

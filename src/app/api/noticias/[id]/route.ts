@@ -34,8 +34,9 @@ export async function GET(
       data: noticiaFormateada
     })
 
-  } catch (error: any) {
-    if (error.code === 'P2025') {
+  } catch (error: unknown) {
+    const err = error as { code?: string }
+    if (err.code === 'P2025') {
       return NextResponse.json(
         { success: false, error: 'Noticia no encontrada' },
         { status: 404 }
@@ -90,8 +91,9 @@ export async function DELETE(
       message: 'Noticia eliminada exitosamente'
     })
 
-  } catch (error: any) {
-    if (error.code === 'P2025') {
+  } catch (error: unknown) {
+    const err = error as { code?: string }
+    if (err.code === 'P2025') {
       return NextResponse.json(
         { success: false, error: 'Noticia no encontrada' },
         { status: 404 }
@@ -157,8 +159,9 @@ export async function PUT(
       message: 'Noticia actualizada exitosamente'
     })
 
-  } catch (error: any) {
-    if (error.code === 'P2025') {
+  } catch (error: unknown) {
+    const err = error as { code?: string }
+    if (err.code === 'P2025') {
       return NextResponse.json(
         { success: false, error: 'Noticia no encontrada' },
         { status: 404 }

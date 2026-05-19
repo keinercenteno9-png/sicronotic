@@ -12,8 +12,9 @@ export function useNotificaciones() {
         const response = await fetch('/api/notificaciones/check')
         const result = await response.json()
         
-        if (result.success && result.eventos.length > 0) {
-          result.eventos.forEach((evento: any) => {
+        if (result.success && Array.isArray(result.eventos) && result.eventos.length > 0) {
+          const eventos = result.eventos as Array<{ id: string; titulo: string; horaInicio: string }>
+          eventos.forEach(evento => {
             // Evitar notificar el mismo evento múltiples veces
             if (!notificadosRef.current.has(evento.id)) {
               notificadosRef.current.add(evento.id)

@@ -74,6 +74,25 @@ interface Evento {
   icono: string | null
 }
 
+interface EventoApi {
+  id: string
+  titulo: string
+  fecha: string
+  horaInicio: string
+  horaFin: string
+  ubicacion: string | null
+  descripcion: string | null
+  invitados?: Array<{ nombre: string }>
+  notificar: boolean
+  color: string
+  textColor: string
+  bold: boolean
+  italic: boolean
+  underline: boolean
+  textAlign: 'left' | 'center' | 'right'
+  icono: string | null
+}
+
 interface HoraData {
   hora: string
   horaNum: number
@@ -397,7 +416,7 @@ export default function CalendarioPage(): React.ReactElement {
       const result = await response.json()
       
       if (result.success) {
-        const eventosConvertidos: Evento[] = result.data.map((evento: any) => {
+        const eventosConvertidos: Evento[] = (result.data as EventoApi[]).map((evento) => {
           const fechaUTC = new Date(evento.fecha)
           const fechaLocal = new Date(fechaUTC.getFullYear(), fechaUTC.getMonth(), fechaUTC.getDate())
           return {
@@ -408,7 +427,7 @@ export default function CalendarioPage(): React.ReactElement {
             horaFin: evento.horaFin,
             ubicacion: evento.ubicacion,
             descripcion: evento.descripcion,
-            invitados: evento.invitados?.map((i: any) => i.nombre) || [],
+            invitados: evento.invitados?.map((i) => i.nombre) || [],
             notificar: evento.notificar,
             color: evento.color,
             textColor: evento.textColor,
@@ -612,7 +631,10 @@ export default function CalendarioPage(): React.ReactElement {
   }, [])
 
   useEffect(() => {
-    cargarEventos()
+    const timeout = window.setTimeout(() => {
+      cargarEventos()
+    }, 0)
+    return () => window.clearTimeout(timeout)
   }, [cargarEventos])
 
   const eventosHoy = obtenerEventosDelDia(fechaHoras)

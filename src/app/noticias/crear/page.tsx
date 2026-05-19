@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { useEditor, EditorContent } from '@tiptap/react'
+import { useEditor, EditorContent, type Editor } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Underline from '@tiptap/extension-underline'
 import TextAlign from '@tiptap/extension-text-align'
@@ -59,7 +59,7 @@ const coloresTexto = [
   { nombre: 'Cian', valor: '#06B6D4' }
 ]
 
-const MenuBar = ({ editor }: { editor: any }) => {
+const MenuBar = ({ editor }: { editor: Editor | null }) => {
   if (!editor) return null
 
   return (
@@ -185,7 +185,7 @@ const MenuBar = ({ editor }: { editor: any }) => {
 
 export default function CrearNoticiaPage() {
   const router = useRouter()
-  const [isMounted, setIsMounted] = useState(false)
+  const [isMounted, setIsMounted] = useState<boolean>(() => typeof window !== 'undefined')
   const [isLoading, setIsLoading] = useState(false)
   const [destacadasCount, setDestacadasCount] = useState(0)
   
@@ -242,9 +242,6 @@ export default function CrearNoticiaPage() {
     fetchDestacadasCount()
   }, [])
 
-  useEffect(() => {
-    setIsMounted(true)
-  }, [])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target

@@ -1,5 +1,6 @@
 // src/app/api/eventos/route.ts
 import { NextRequest, NextResponse } from 'next/server'
+import type { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 
 // GET - Obtener todos los eventos
@@ -11,7 +12,7 @@ export async function GET(request: NextRequest) {
     const fechaInicio = searchParams.get('fechaInicio')
     const fechaFin = searchParams.get('fechaFin')
     
-    const where: any = {}
+    const where: Prisma.EventoWhereInput = {}
     
     if (fechaInicio && fechaFin) {
       where.fecha = {
