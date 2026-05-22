@@ -10,13 +10,13 @@ const accessKeyId = env.R2_ACCESS_KEY_ID
 const secretAccessKey = env.R2_SECRET_ACCESS_KEY
 const region = env.R2_REGION || 'auto'
 
-const vercelUrl = env.VERCEL_BLOB_URL
-const vercelToken = env.VERCEL_BLOB_TOKEN
-const vercelUrlSafe = vercelUrl ?? ''
-const vercelTokenSafe = vercelToken ?? ''
+const blobStoreId = env.BLOB_STORE_ID
+const blobToken = env.BLOB_READ_WRITE_TOKEN
+const blobStoreIdSafe = blobStoreId ?? ''
+const blobTokenSafe = blobToken ?? ''
 
 const r2Enabled = Boolean(bucket && endpoint && accessKeyId && secretAccessKey)
-const vercelEnabled = Boolean(vercelUrlSafe && vercelTokenSafe)
+const vercelEnabled = Boolean(blobStoreIdSafe && blobTokenSafe)
 
 let client: S3Client | undefined
 
@@ -90,12 +90,12 @@ export const uploadImageToR2 = async (
   }
 
   if (vercelEnabled) {
-    const url = `${vercelUrlSafe.replace(/\/$/, '')}/${key}`
+    const url = `https://api.vercel.com/v1/blob/stores/${blobStoreIdSafe}/objects/${encodeURIComponent(key)}`
     const payload = Buffer.isBuffer(body) ? body : Buffer.from(body)
     const res = await fetch(url, {
       method: 'PUT',
       headers: {
-        Authorization: `Bearer ${vercelTokenSafe}`,
+        Authorization: `Bearer ${blobTokenSafe}`,
         'Content-Type': contentType,
       },
       body: payload as any,
@@ -127,11 +127,11 @@ export const getImageFromR2 = async (filename: string) => {
   }
 
   if (vercelEnabled) {
-    const url = `${vercelUrlSafe.replace(/\/$/, '')}/${key}`
+    const url = `https://api.vercel.com/v1/blob/stores/${blobStoreIdSafe}/objects/${encodeURIComponent(key)}`
     const res = await fetch(url, {
       method: 'GET',
       headers: {
-        Authorization: `Bearer ${vercelTokenSafe}`,
+        Authorization: `Bearer ${blobTokenSafe}`,
       },
     })
 
@@ -166,11 +166,11 @@ export const deleteImageFromR2 = async (filename: string) => {
   }
 
   if (vercelEnabled) {
-    const url = `${vercelUrlSafe.replace(/\/$/, '')}/${key}`
+    const url = `https://api.vercel.com/v1/blob/stores/${blobStoreIdSafe}/objects/${encodeURIComponent(key)}`
     const res = await fetch(url, {
       method: 'DELETE',
       headers: {
-        Authorization: `Bearer ${vercelTokenSafe}`,
+        Authorization: `Bearer ${blobTokenSafe}`,
       },
     })
 
