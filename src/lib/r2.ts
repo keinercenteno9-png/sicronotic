@@ -12,9 +12,11 @@ const region = env.R2_REGION || 'auto'
 
 const vercelUrl = env.VERCEL_BLOB_URL
 const vercelToken = env.VERCEL_BLOB_TOKEN
+const vercelUrlSafe = vercelUrl ?? ''
+const vercelTokenSafe = vercelToken ?? ''
 
 const r2Enabled = Boolean(bucket && endpoint && accessKeyId && secretAccessKey)
-const vercelEnabled = Boolean(vercelUrl && vercelToken)
+const vercelEnabled = Boolean(vercelUrlSafe && vercelTokenSafe)
 
 let client: S3Client | undefined
 
@@ -88,12 +90,12 @@ export const uploadImageToR2 = async (
   }
 
   if (vercelEnabled) {
-    const url = `${vercelUrl!.replace(/\/$/, '')}/${key}`
+    const url = `${vercelUrlSafe.replace(/\/$/, '')}/${key}`
     const payload = Buffer.isBuffer(body) ? body : Buffer.from(body)
     const res = await fetch(url, {
       method: 'PUT',
       headers: {
-        Authorization: `Bearer ${vercelToken!}`,
+        Authorization: `Bearer ${vercelTokenSafe}`,
         'Content-Type': contentType,
       },
       body: payload as any,
@@ -125,11 +127,11 @@ export const getImageFromR2 = async (filename: string) => {
   }
 
   if (vercelEnabled) {
-    const url = `${vercelUrl!.replace(/\/$/, '')}/${key}`
+    const url = `${vercelUrlSafe.replace(/\/$/, '')}/${key}`
     const res = await fetch(url, {
       method: 'GET',
       headers: {
-        Authorization: `Bearer ${vercelToken!}`,
+        Authorization: `Bearer ${vercelTokenSafe}`,
       },
     })
 
@@ -164,11 +166,11 @@ export const deleteImageFromR2 = async (filename: string) => {
   }
 
   if (vercelEnabled) {
-    const url = `${vercelUrl!.replace(/\/$/, '')}/${key}`
+    const url = `${vercelUrlSafe.replace(/\/$/, '')}/${key}`
     const res = await fetch(url, {
       method: 'DELETE',
       headers: {
-        Authorization: `Bearer ${vercelToken!}`,
+        Authorization: `Bearer ${vercelTokenSafe}`,
       },
     })
 

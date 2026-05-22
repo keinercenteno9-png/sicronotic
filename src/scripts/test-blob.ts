@@ -1,16 +1,11 @@
 import 'dotenv/config'
 import { uploadImageToR2, getImageFromR2, deleteImageFromR2 } from '../lib/r2'
 
-const toBuffer = async (body: any) => {
+const toBuffer = async (body: unknown) => {
   if (Buffer.isBuffer(body)) return body
   if (body instanceof Uint8Array) return Buffer.from(body)
-  if (body?.arrayBuffer) return Buffer.from(await body.arrayBuffer())
-  if (body?.pipe) {
-    const chunks: Uint8Array[] = []
-    for await (const chunk of body) {
-      chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : Buffer.from(chunk))
-    }
-    return Buffer.concat(chunks)
+  if (typeof body === 'object' && body !== null && 'arrayBuffer' in body && typeof (body as any).arrayBuffer === 'function') {
+    return Buffer.from(await (body as any).arrayBuffer())
   }
   return Buffer.from(String(body))
 }
