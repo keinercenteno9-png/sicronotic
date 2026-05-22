@@ -88,14 +88,15 @@ export const uploadImageToR2 = async (
   }
 
   if (vercelEnabled) {
-    const url = `${vercelUrl.replace(/\/$/, '')}/${key}`
+    const url = `${vercelUrl!.replace(/\/$/, '')}/${key}`
+    const payload = Buffer.isBuffer(body) ? body : Buffer.from(body)
     const res = await fetch(url, {
       method: 'PUT',
       headers: {
-        Authorization: `Bearer ${vercelToken}`,
+        Authorization: `Bearer ${vercelToken!}`,
         'Content-Type': contentType,
       },
-      body,
+      body: payload as any,
     })
 
     if (!res.ok) {
@@ -124,11 +125,11 @@ export const getImageFromR2 = async (filename: string) => {
   }
 
   if (vercelEnabled) {
-    const url = `${vercelUrl.replace(/\/$/, '')}/${key}`
+    const url = `${vercelUrl!.replace(/\/$/, '')}/${key}`
     const res = await fetch(url, {
       method: 'GET',
       headers: {
-        Authorization: `Bearer ${vercelToken}`,
+        Authorization: `Bearer ${vercelToken!}`,
       },
     })
 
@@ -163,11 +164,11 @@ export const deleteImageFromR2 = async (filename: string) => {
   }
 
   if (vercelEnabled) {
-    const url = `${vercelUrl.replace(/\/$/, '')}/${key}`
+    const url = `${vercelUrl!.replace(/\/$/, '')}/${key}`
     const res = await fetch(url, {
       method: 'DELETE',
       headers: {
-        Authorization: `Bearer ${vercelToken}`,
+        Authorization: `Bearer ${vercelToken!}`,
       },
     })
 
