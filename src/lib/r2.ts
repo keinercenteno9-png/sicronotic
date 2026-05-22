@@ -10,7 +10,12 @@ const accessKeyId = env.R2_ACCESS_KEY_ID
 const secretAccessKey = env.R2_SECRET_ACCESS_KEY
 const region = env.R2_REGION || 'auto'
 
+const vercelUrl = env.VERCEL_BLOB_URL
+const vercelToken = env.VERCEL_BLOB_TOKEN
+
 const r2Enabled = Boolean(bucket && endpoint && accessKeyId && secretAccessKey)
+const vercelEnabled = Boolean(vercelUrl && vercelToken)
+
 let client: S3Client | undefined
 
 if (r2Enabled) {
@@ -26,8 +31,10 @@ if (r2Enabled) {
     forcePathStyle: true,
   })
   console.log('☁️ Cloudflare R2 configurado y habilitado')
+} else if (vercelEnabled) {
+  console.log('☁️ Vercel Blob configurado y habilitado')
 } else {
-  console.warn('⚠️ Cloudflare R2 no está configurado. Se usará almacenamiento local en public/uploads/noticias')
+  console.warn('⚠️ Ningún proveedor de blob configurado. Se usará almacenamiento local en public/uploads/noticias')
 }
 
 const localUploadsDir = join(process.cwd(), 'public/uploads/noticias')
@@ -80,6 +87,25 @@ export const uploadImageToR2 = async (
     return key
   }
 
+  if (vercelEnabled) {
+    const url = `${vercelUrl.replace(/\/$/, '')}/${key}`
+    const res = await fetch(url, {
+      method: 'PUT',
+      headers: {
+        Authorization: `Bearer ${vercelToken}`,
+        'Content-Type': contentType,
+      },
+      body,
+    })
+
+    if (!res.ok) {
+      const text = await res.text().catch(() => '')
+      throw new Error(`Error subiendo a Vercel Blob: ${res.status} ${text}`)
+    }
+
+    return key
+  }
+
   await ensureLocalUploadsDir()
   await writeFile(localFilePath(filename), body)
   return key
@@ -95,6 +121,25 @@ export const getImageFromR2 = async (filename: string) => {
         Key: key,
       })
     )
+  }
+
+  if (vercelEnabled) {
+    const url = `${vercelUrl.replace(/\/$/, '')}/${key}`
+    const res = await fetch(url, {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${vercelToken}`,
+      },
+    })
+
+    if (!res.ok) {
+      throw new Error(`Archivo no encontrado en Vercel Blob: ${res.status}`)
+    }
+
+    const arrayBuffer = await res.arrayBuffer()
+    const Body = Buffer.from(arrayBuffer)
+    const ContentType = res.headers.get('content-type') || getContentType(key.replace(/^noticias\//, ''))
+    return { Body, ContentType }
   }
 
   const Body = await readFile(localFilePath(key.replace(/^noticias\//, '')))
@@ -114,6 +159,23 @@ export const deleteImageFromR2 = async (filename: string) => {
         Key: key,
       })
     )
+    return
+  }
+
+  if (vercelEnabled) {
+    const url = `${vercelUrl.replace(/\/$/, '')}/${key}`
+    const res = await fetch(url, {
+      method: 'DELETE',
+      headers: {
+        Authorization: `Bearer ${vercelToken}`,
+      },
+    })
+
+    if (!res.ok) {
+      const text = await res.text().catch(() => '')
+      throw new Error(`Error eliminando en Vercel Blob: ${res.status} ${text}`)
+    }
+
     return
   }
 
